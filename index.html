@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신청서</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+        }
+
+        .form-group input.error {
+            border-color: #ff4757;
+        }
+
+        .error-message {
+            color: #ff4757;
+            font-size: 12px;
+            margin-top: 6px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .success-screen .checkmark {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+            color: white;
+        }
+
+        .success-screen h2 {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .success-screen p {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .phone-hint {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 신청 폼 -->
+        <div id="formSection">
+            <div class="header">
+                <h1>참여 신청서</h1>
+                <p>아래 정보를 입력해주세요</p>
+            </div>
+
+            <form id="signupForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="name">이름</label>
+                    <input
+                        type="text"
+                        id="name"
+                        placeholder="실명을 입력해주세요"
+                        maxlength="20"
+                        required
+                    >
+                    <div class="error-message" id="nameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">전화번호</label>
+                    <input
+                        type="tel"
+                        id="phone"
+                        placeholder="01012345678"
+                        maxlength="13"
+                        required
+                    >
+                    <div class="phone-hint">하이픈(-) 없이 숫자만 입력해주세요</div>
+                    <div class="error-message" id="phoneError"></div>
+                </div>
+
+                <button type="button" class="submit-btn" id="submitBtn" onclick="handleSubmit()">
+                    신청하기
+                </button>
+            </form>
+        </div>
+
+        <!-- 성공 화면 -->
+        <div class="success-screen" id="successScreen">
+            <div class="checkmark">&#10003;</div>
+            <h2>신청 완료!</h2>
+            <p>참여해주셔서 감사합니다</p>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    // [설정] 아래 URL을 Google Apps Script 웹 앱 URL로 교체하세요
+    // ============================================================
+    const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL_HERE';
+
+    // ============================================================
+    // 전화번호 검증 로직
+    // ============================================================
+
+    // 허수 전화번호 블랙리스트 (자주 쓰이는 가짜 번호)
+    const BLACKLIST = [
+        '01000000000',
+        '01011111111',
+        '01012345678',
+        '01022222222',
+        '01033333333',
+        '01044444444',
+        '01055555555',
+        '01066666666',
+        '01077777777',
+        '01088888888',
+        '01099999999',
+        '01087654321',
+        '01011112222',
+        '01098765432',
+        '01000001111',
+        '01010101010',
+        '01001010101',
+    ];
+
+    function validatePhone(phone) {
+        // 하이픈, 공백 제거
+        const cleaned = phone.replace(/[-\s]/g, '');
+
+        // 1) 기본 형식 검사: 010으로 시작하는 10~11자리 숫자
+        if (!/^01[016789]\d{7,8}$/.test(cleaned)) {
+            return { valid: false, message: '올바른 전화번호 형식이 아닙니다' };
+        }
+
+        // 2) 블랙리스트 검사
+        if (BLACKLIST.includes(cleaned)) {
+            return { valid: false, message: '유효하지 않은 전화번호입니다. 본인 번호를 입력해주세요' };
+        }
+
+        // 3) 뒷자리 8자리 중 같은 숫자 반복 검사 (예: 010-1111-1111)
+        const lastDigits = cleaned.slice(3);
+        if (/^(\d)\1+$/.test(lastDigits)) {
+            return { valid: false, message: '유효하지 않은 전화번호입니다. 본인 번호를 입력해주세요' };
+        }
+
+        // 4) 연속 숫자 검사 (예: 010-1234-5678, 010-8765-4321)
+        const ascending = '0123456789';
+        const descending = '9876543210';
+        if (ascending.includes(lastDigits) || descending.includes(lastDigits)) {
+            return { valid: false, message: '유효하지 않은 전화번호입니다. 본인 번호를 입력해주세요' };
+        }
+
+        // 5) 앞 4자리와 뒤 4자리가 동일한 패턴 (예: 010-1234-1234)
+        if (lastDigits.length === 8) {
+            const first = lastDigits.slice(0, 4);
+            const second = lastDigits.slice(4);
+            if (first === second) {
+                return { valid: false, message: '유효하지 않은 전화번호입니다. 본인 번호를 입력해주세요' };
+            }
+        }
+
+        // 6) 뒷 8자리 중 고유 숫자가 2개 이하 (예: 010-1121-1111)
+        const uniqueDigits = new Set(lastDigits.split('')).size;
+        if (uniqueDigits <= 1) {
+            return { valid: false, message: '유효하지 않은 전화번호입니다. 본인 번호를 입력해주세요' };
+        }
+
+        return { valid: true };
+    }
+
+    // ============================================================
+    // 이름 검증 로직
+    // ============================================================
+
+    const NAME_BLACKLIST = [
+        '홍길동', '테스트', '김철수', '이영희', 'test', 'ㅋㅋㅋ',
+        'ㅎㅎㅎ', 'ㅇㅇㅇ', 'ㄱㄱㄱ', '가나다', 'abc', 'aaa',
+        '없음', '몰라', '비밀', '익명', '신청자',
+    ];
+
+    function validateName(name) {
+        const trimmed = name.trim();
+
+        // 1) 최소 2자 이상
+        if (trimmed.length < 2) {
+            return { valid: false, message: '이름은 2자 이상 입력해주세요' };
+        }
+
+        // 2) 블랙리스트 검사
+        if (NAME_BLACKLIST.includes(trimmed.toLowerCase())) {
+            return { valid: false, message: '실명을 입력해주세요' };
+        }
+
+        // 3) 같은 글자 반복 (예: ㅋㅋ, ㅎㅎ, aa)
+        if (/^(.)\1+$/.test(trimmed)) {
+            return { valid: false, message: '실명을 입력해주세요' };
+        }
+
+        // 4) 한글 자음/모음만으로 구성
+        if (/^[ㄱ-ㅎㅏ-ㅣ]+$/.test(trimmed)) {
+            return { valid: false, message: '실명을 입력해주세요' };
+        }
+
+        return { valid: true };
+    }
+
+    // ============================================================
+    // 폼 제출 처리
+    // ============================================================
+
+    async function handleSubmit() {
+        const nameInput = document.getElementById('name');
+        const phoneInput = document.getElementById('phone');
+        const nameError = document.getElementById('nameError');
+        const phoneError = document.getElementById('phoneError');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // 에러 초기화
+        nameInput.classList.remove('error');
+        phoneInput.classList.remove('error');
+        nameError.classList.remove('show');
+        phoneError.classList.remove('show');
+
+        const name = nameInput.value.trim();
+        const phone = phoneInput.value.trim();
+
+        // 이름 검증
+        const nameResult = validateName(name);
+        if (!nameResult.valid) {
+            nameInput.classList.add('error');
+            nameError.textContent = nameResult.message;
+            nameError.classList.add('show');
+            nameInput.focus();
+            return;
+        }
+
+        // 전화번호 검증
+        const phoneResult = validatePhone(phone);
+        if (!phoneResult.valid) {
+            phoneInput.classList.add('error');
+            phoneError.textContent = phoneResult.message;
+            phoneError.classList.add('show');
+            phoneInput.focus();
+            return;
+        }
+
+        // 중복 제출 방지
+        const cleanedPhone = phone.replace(/[-\s]/g, '');
+        const submitted = JSON.parse(localStorage.getItem('submitted_phones') || '[]');
+        if (submitted.includes(cleanedPhone)) {
+            phoneInput.classList.add('error');
+            phoneError.textContent = '이미 신청하셨습니다';
+            phoneError.classList.add('show');
+            return;
+        }
+
+        // 전송
+        submitBtn.disabled = true;
+        submitBtn.textContent = '전송 중...';
+
+        try {
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    phone: cleanedPhone,
+                    timestamp: new Date().toLocaleString('ko-KR'),
+                }),
+            });
+
+            // 중복 방지용 로컬 저장
+            submitted.push(cleanedPhone);
+            localStorage.setItem('submitted_phones', JSON.stringify(submitted));
+
+            // 성공 화면 표시
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('successScreen').style.display = 'block';
+
+        } catch (error) {
+            alert('전송에 실패했습니다. 다시 시도해주세요.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '신청하기';
+        }
+    }
+
+    // 전화번호 입력 시 자동 숫자만 허용
+    document.getElementById('phone').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+    </script>
+</body>
+</html>
