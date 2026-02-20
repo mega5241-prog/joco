@@ -16,15 +16,21 @@ function doPost(e) {
 
     // 첫 행에 헤더가 없으면 추가
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow(['번호', '이름', '전화번호', '신청일시']);
+      sheet.appendRow(['번호', '참여의사', '건강검진여부', '방문예정일', '성함', '휴대폰번호', '생년월일', '이메일', '의견/문의', '신청일시']);
     }
 
     // 데이터 추가
     var rowNumber = sheet.getLastRow(); // 헤더 제외한 번호
     sheet.appendRow([
       rowNumber,
+      data.participate,
+      data.checkup,
+      data.visitDate,
       data.name,
       data.phone,
+      data.birthDate,
+      data.email,
+      data.comment,
       data.timestamp
     ]);
 
