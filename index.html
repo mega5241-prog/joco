@@ -587,26 +587,74 @@
         return true;
     }
 
-    // 방문 예정일: 오늘 이후 날짜만 허용
+    // 실제 존재하는 날짜인지 확인 (2월 30일 등 방지)
+    function isRealDate(y, m, d) {
+        const date = new Date(y, m - 1, d);
+        return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
+    }
+
+    // 공휴일 목록 (2025~2026)
+    const HOLIDAYS = [
+        // 2025년
+        '20250101', // 신정
+        '20250128','20250129','20250130', // 설날 연휴
+        '20250301', // 삼일절
+        '20250303', // 삼일절 대체공휴일
+        '20250505', // 어린이날 + 부처님오신날
+        '20250506', // 대체공휴일
+        '20250606', // 현충일
+        '20250815', // 광복절
+        '20251003', // 개천절
+        '20251005','20251006','20251007', // 추석 연휴
+        '20251008', // 추석 대체공휴일
+        '20251009', // 한글날
+        '20251225', // 크리스마스
+        // 2026년
+        '20260101', // 신정
+        '20260216','20260217','20260218', // 설날 연휴
+        '20260301', // 삼일절
+        '20260505', // 어린이날
+        '20260524', // 부처님오신날
+        '20260606', // 현충일
+        '20260815', // 광복절
+        '20260924','20260925','20260926', // 추석 연휴
+        '20261003', // 개천절
+        '20261009', // 한글날
+        '20261225', // 크리스마스
+    ];
+
+    // 방문 예정일: 오늘 이후 + 평일만 + 공휴일 제외
     function validateFutureDate(val) {
-        if (!validateDate(val)) return { valid: false, message: 'yyyymmdd 형식으로 올바른 날짜를 입력해주세요' };
+        if (!/^\d{8}$/.test(val)) return { valid: false, message: 'yyyymmdd 형식으로 올바른 날짜를 입력해주세요' };
+        const y = parseInt(val.substring(0, 4));
+        const m = parseInt(val.substring(4, 6));
+        const d = parseInt(val.substring(6, 8));
+
+        if (!isRealDate(y, m, d)) return { valid: false, message: '존재하지 않는 날짜입니다' };
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const y = parseInt(val.substring(0, 4));
-        const m = parseInt(val.substring(4, 6)) - 1;
-        const d = parseInt(val.substring(6, 8));
-        const inputDate = new Date(y, m, d);
+        const inputDate = new Date(y, m - 1, d);
+
         if (inputDate < today) return { valid: false, message: '오늘 이후 날짜를 입력해주세요' };
+
+        const day = inputDate.getDay();
+        if (day === 0) return { valid: false, message: '일요일은 선택할 수 없습니다. 평일을 입력해주세요' };
+        if (day === 6) return { valid: false, message: '토요일은 선택할 수 없습니다. 평일을 입력해주세요' };
+
+        if (HOLIDAYS.includes(val)) return { valid: false, message: '공휴일은 선택할 수 없습니다. 평일을 입력해주세요' };
+
         return { valid: true };
     }
 
     // 생년월일: 만 19세 이상만 허용
     function validateBirthDate(val) {
-        if (!validateDate(val)) return { valid: false, message: 'yyyymmdd 형식으로 올바른 생년월일을 입력해주세요' };
-        const today = new Date();
+        if (!/^\d{8}$/.test(val)) return { valid: false, message: 'yyyymmdd 형식으로 올바른 생년월일을 입력해주세요' };
         const y = parseInt(val.substring(0, 4));
-        const m = parseInt(val.substring(4, 6)) - 1;
+        const m = parseInt(val.substring(4, 6));
         const d = parseInt(val.substring(6, 8));
+        if (!isRealDate(y, m, d)) return { valid: false, message: '존재하지 않는 날짜입니다' };
+        const today = new Date();
         const birth = new Date(y, m, d);
         if (birth > today) return { valid: false, message: '올바른 생년월일을 입력해주세요' };
         let age = today.getFullYear() - birth.getFullYear();
