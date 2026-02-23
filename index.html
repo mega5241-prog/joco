@@ -170,10 +170,32 @@
         .radio-option.selected { border-color: #2563eb; background: #eff6ff; }
 
         .radio-option input[type="radio"] {
+            display: none;
+        }
+
+        .radio-option .radio-circle {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%;
             margin-right: 10px;
-            accent-color: #2563eb;
-            width: 18px;
-            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .radio-option.selected .radio-circle {
+            border-color: #2563eb;
+            background: #2563eb;
+        }
+
+        .radio-option.selected .radio-circle::after {
+            content: '\2713';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
         }
 
         .radio-option span {
@@ -297,14 +319,17 @@
                 <div class="radio-group" id="participateGroup">
                     <label class="radio-option">
                         <input type="radio" name="participate" value="참여합니다">
+                        <div class="radio-circle"></div>
                         <span>참여합니다.</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="participate" value="참여하지 않습니다">
+                        <div class="radio-circle"></div>
                         <span>참여하지 않습니다.</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="participate" value="설명을 들은 뒤 결정하겠습니다">
+                        <div class="radio-circle"></div>
                         <span>설명을 들은 뒤 결정하겠습니다.</span>
                     </label>
                 </div>
@@ -316,10 +341,12 @@
                 <div class="radio-group" id="checkupGroup">
                     <label class="radio-option">
                         <input type="radio" name="checkup" value="예">
+                        <div class="radio-circle"></div>
                         <span>예, 이미 건강검진을 받았습니다.</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="checkup" value="아니요">
+                        <div class="radio-circle"></div>
                         <span>아니요, 아직 건강검진을 받지 않았습니다.</span>
                     </label>
                 </div>
@@ -348,10 +375,12 @@
                     <div class="radio-group" id="willParticipateGroup">
                         <label class="radio-option">
                             <input type="radio" name="willParticipate" value="네, 예약 후 참여하겠습니다">
+                            <div class="radio-circle"></div>
                             <span>네, 예약 후 참여하겠습니다.</span>
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="willParticipate" value="아니요, 참여가 어렵습니다">
+                            <div class="radio-circle"></div>
                             <span>아니요, 참여가 어렵습니다.</span>
                         </label>
                     </div>
@@ -523,11 +552,12 @@
             document.getElementById('dateGroup').style.display = 'block';
         }
 
-        // 날짜 검증
+        // 날짜 검증 (오늘 이후 날짜만 허용)
         const dateVal = document.getElementById('visitDate').value.trim();
-        if (!validateDate(dateVal)) {
+        const dateResult = validateFutureDate(dateVal);
+        if (!dateResult.valid) {
             document.getElementById('visitDate').classList.add('error');
-            document.getElementById('dateError').textContent = 'yyyymmdd 형식으로 올바른 날짜를 입력해주세요';
+            document.getElementById('dateError').textContent = dateResult.message;
             document.getElementById('dateError').classList.add('show');
             return;
         }
@@ -549,6 +579,35 @@
         if (m < 1 || m > 12) return false;
         if (d < 1 || d > 31) return false;
         return true;
+    }
+
+    // 방문 예정일: 오늘 이후 날짜만 허용
+    function validateFutureDate(val) {
+        if (!validateDate(val)) return { valid: false, message: 'yyyymmdd 형식으로 올바른 날짜를 입력해주세요' };
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const y = parseInt(val.substring(0, 4));
+        const m = parseInt(val.substring(4, 6)) - 1;
+        const d = parseInt(val.substring(6, 8));
+        const inputDate = new Date(y, m, d);
+        if (inputDate < today) return { valid: false, message: '오늘 이후 날짜를 입력해주세요' };
+        return { valid: true };
+    }
+
+    // 생년월일: 만 19세 이상만 허용
+    function validateBirthDate(val) {
+        if (!validateDate(val)) return { valid: false, message: 'yyyymmdd 형식으로 올바른 생년월일을 입력해주세요' };
+        const today = new Date();
+        const y = parseInt(val.substring(0, 4));
+        const m = parseInt(val.substring(4, 6)) - 1;
+        const d = parseInt(val.substring(6, 8));
+        const birth = new Date(y, m, d);
+        if (birth > today) return { valid: false, message: '올바른 생년월일을 입력해주세요' };
+        let age = today.getFullYear() - birth.getFullYear();
+        const mDiff = today.getMonth() - birth.getMonth();
+        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) age--;
+        if (age < 19) return { valid: false, message: '만 19세 이상만 참여 가능합니다' };
+        return { valid: true };
     }
 
     // ============================================================
@@ -629,11 +688,12 @@
             document.getElementById('phoneError').classList.remove('show');
         }
 
-        // 생년월일
+        // 생년월일 (만 19세 이상만)
         const birthInput = document.getElementById('birthDate');
-        if (!validateDate(birthInput.value.trim())) {
+        const birthResult = validateBirthDate(birthInput.value.trim());
+        if (!birthResult.valid) {
             birthInput.classList.add('error');
-            document.getElementById('birthError').textContent = 'yyyymmdd 형식으로 올바른 생년월일을 입력해주세요';
+            document.getElementById('birthError').textContent = birthResult.message;
             document.getElementById('birthError').classList.add('show');
             if (!hasError) { birthInput.focus(); hasError = true; }
         } else {
